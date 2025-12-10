@@ -37,7 +37,7 @@ export default function DuelPanels({ currentLength, onGameOver, setAttempts, toa
   const [userHistory, setUserHistory] = useState([]);
   const [computerHistory, setComputerHistory] = useState([]);
   const [currentComputerGuess, setCurrentComputerGuess] = useState(null);
-  const [computerFeedbackPending, setComputerFeedbackPending] = useState(false);
+  const [, setComputerFeedbackPending] = useState(false);
   const totalRef = useRef("");
   const posRef = useRef("");
 

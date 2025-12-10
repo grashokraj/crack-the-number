@@ -23,7 +23,6 @@ export default function SinglePanel({ currentLength, setAttempts, onGameOver, pl
   const [hintedDigitsWithoutPos, setHintedDigitsWithoutPos] = useState([]);
 
   const inputRefs = useRef([]);
-  const timerStartRef = useRef(null); // used if want time of finishing
   const startTimeRef = useRef(null);
 
   // init / reset

@@ -16,7 +16,7 @@ import { audioManager } from "../utils/AudioManager";
 */
 
 export default function GamePage({ playerName, gameMode, difficultyKey, toastManager }) {
-  const [showGame, setShowGame] = useState(true);
+  const [showGame] = useState(true);
   const [attempts, setAttempts] = useState(0);
   const [timeLabel, setTimeLabel] = useState("Time: 0:00");
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
