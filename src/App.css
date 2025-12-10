@@ -380,3 +380,92 @@
         justify-self: flex-start;
         width: 50%;
       }
+
+    /* TOAST NOTIFICATIONS CSS */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 3000;
+      width: 90%;
+      max-width: 400px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+    }
+
+    .toast {
+      background: rgba(20, 20, 30, 0.95);
+      color: #fff;
+      padding: 12px 16px;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: fadeIn 0.3s, slideUp 0.3s;
+      border-left: 4px solid #42f59b;
+      pointer-events: auto;
+      border: 1px solid rgba(100, 100, 140, 0.4);
+    }
+
+    .toast.error {
+      border-left-color: #ff4444;
+    }
+
+    .toast.success {
+      border-left-color: #42f59b;
+    }
+
+    .toast.warning {
+      border-left-color: #ffaa00;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes slideUp {
+      from {
+        transform: translateY(20px);
+      }
+      to {
+        transform: translateY(0);
+      }
+    }
+
+    /* HINT HIGHLIGHTING */
+    .digit-input.hinted {
+      background: rgba(66, 245, 155, 0.2);
+      border-color: #42f59b;
+    }
+
+    /* MODAL ENHANCEMENTS */
+    .modal-overlay {
+      backdrop-filter: blur(2px);
+    }
+
+    /* BUTTON STATES */
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-modal-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* DUEL SPECIFIC */
+    .duel-computer-digits span {
+      padding: 2px 4px;
+      border-radius: 3px;
+      background: rgba(100, 100, 130, 0.6);
+    }

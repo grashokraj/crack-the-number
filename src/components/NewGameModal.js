@@ -61,6 +61,15 @@ export default function NewGameModal({ visible, initial, onClose, onStart }) {
             >
               vs Computer
             </button>
+            <button
+              className={`btn-option ${
+                mode === "online" ? "selected" : ""
+              }`}
+              data-mode="online"
+              onClick={() => setMode("online")}
+            >
+              Online
+            </button>
           </div>
         </div>
 

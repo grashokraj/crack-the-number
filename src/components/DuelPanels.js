@@ -1,11 +1,13 @@
 import React, { useEffect, useRef, useState } from "react";
 import SecretPad from "./SecretPad";
+import { audioManager } from "../utils/AudioManager";
 
 /*
   DuelPanels implements the vsComputer mode:
   - user guesses computer's secret
   - computer proposes guesses and user gives feedback (total correct, correct pos)
   - uses candidate list elimination as original
+  - integrates audio and toast notifications
 */
 
 function generateCandidatesForLength(len) {
@@ -28,7 +30,7 @@ function generateCandidatesForLength(len) {
   return candidates;
 }
 
-export default function DuelPanels({ currentLength, onGameOver }) {
+export default function DuelPanels({ currentLength, onGameOver, setAttempts, toastManager }) {
   const [computerSecret, setComputerSecret] = useState([]);
   const [candidates, setCandidates] = useState([]);
   const [duelRound, setDuelRound] = useState(0);
@@ -77,12 +79,24 @@ export default function DuelPanels({ currentLength, onGameOver }) {
   }
 
   function handleUserGuess(guessArr) {
+    audioManager.play('click');
     const fb = computeFeedback(computerSecret, guessArr);
-    setUserHistory(h => [{ guess: guessArr, total: fb.total, pos: fb.pos, round: duelRound + 1 }, ...h]);
+    const round = duelRound + 1;
+    setUserHistory(h => [{ guess: guessArr, total: fb.total, pos: fb.pos, round }, ...h]);
+    setAttempts(round);
+    
     if (fb.pos === currentLength) {
       // user cracked the computer
-      onGameOver(0, duelRound + 1);
+      audioManager.play('success');
+      if (toastManager) {
+        toastManager.showToast(`🎉 You cracked the computer in ${round} attempts!`, 'success');
+      }
+      onGameOver(0, round);
       return;
+    }
+    
+    if (toastManager && fb.pos > 0) {
+      toastManager.showToast(`${fb.pos} correct position${fb.pos > 1 ? 's' : ''}!`, 'info');
     }
     proposeComputerGuess();
   }
@@ -107,10 +121,16 @@ export default function DuelPanels({ currentLength, onGameOver }) {
     const total = parseInt(totalRef.current.value || "", 10);
     const pos = parseInt(posRef.current.value || "", 10);
     if (isNaN(total) || isNaN(pos) || total < 0 || pos < 0 || pos > total || total > currentLength) {
-      alert("Please enter valid feedback.");
+      audioManager.play('error');
+      if (toastManager) {
+        toastManager.showToast('Invalid feedback. Check your values.', 'error');
+      }
       return;
     }
-    setComputerHistory(h => [{ guess: currentComputerGuess, total, pos, round: duelRound + 1 }, ...h]);
+
+    audioManager.play('click');
+    const round = duelRound + 1;
+    setComputerHistory(h => [{ guess: currentComputerGuess, total, pos, round }, ...h]);
     const A = pos, B = total - pos;
     const filtered = candidates.filter(code => {
       const fb = compareGuess(code, currentComputerGuess);
@@ -120,14 +140,27 @@ export default function DuelPanels({ currentLength, onGameOver }) {
 
     if (total === currentLength && pos === currentLength) {
       // computer cracked user's secret
-      onGameOver(0, duelRound + 1);
+      audioManager.play('success');
+      if (toastManager) {
+        toastManager.showToast(`💻 Computer cracked you in ${round} attempts!`, 'warning');
+      }
+      onGameOver(0, round);
     } else if (filtered.length === 0) {
       // inconsistent feedback
-      // show message or stop
+      audioManager.play('error');
+      if (toastManager) {
+        toastManager.showToast('Inconsistent feedback detected!', 'error');
+      }
     } else {
-      setDuelRound(r => r + 1);
+      setDuelRound(round);
       setCurrentComputerGuess(null);
       setComputerFeedbackPending(false);
+      // Clear input fields
+      totalRef.current.value = "";
+      posRef.current.value = "";
+      if (toastManager) {
+        toastManager.showToast(`Round ${round} complete. Computer thinking...`, 'info');
+      }
     }
   }
 
@@ -206,15 +239,18 @@ function UserGuessRow({ currentLength, onSubmit }) {
   function submit() {
     const active = inputs.slice(0, currentLength);
     if (active.some(a => a === "")) {
+      audioManager.play('error');
       alert(`Please enter ${currentLength} digits.`);
       return;
     }
     const arr = active.map(n => parseInt(n, 10));
     if (arr.some(n => isNaN(n) || n < 1 || n > 9)) {
+      audioManager.play('error');
       alert("Digits must be 1-9.");
       return;
     }
     if (new Set(arr).size !== currentLength) {
+      audioManager.play('error');
       alert("Digits cannot repeat.");
       return;
     }

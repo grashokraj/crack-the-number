@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import HistoryPanel from "./HistoryPanel";
+import { audioManager } from "../utils/AudioManager";
 
 /*
   SinglePanel encapsulates single-player play area:
@@ -8,9 +9,10 @@ import HistoryPanel from "./HistoryPanel";
   - history of guesses
   - hint logic (as in original)
   - uses local storage for leaderboard
+  - integrates audio and toast notifications
 */
 
-export default function SinglePanel({ currentLength, setAttempts, onGameOver, playerName, difficultyKey }) {
+export default function SinglePanel({ currentLength, setAttempts, onGameOver, playerName, difficultyKey, toastManager }) {
   const [inputs, setInputs] = useState(() => Array(5).fill("")); // always hold 5 inputs; display based on currentLength
   const [singleSecret, setSingleSecret] = useState([]);
   const [attemptCount, setAttemptCount] = useState(0);
@@ -105,8 +107,10 @@ export default function SinglePanel({ currentLength, setAttempts, onGameOver, pl
     const res = readGuessFromInputs();
     if (res.error) {
       setStatus({ type: "warning", text: res.error });
+      audioManager.play('error');
       return;
     }
+    audioManager.play('click');
     const guess = res.digits;
     const fb = computeFeedback(singleSecret, guess);
     const newAttempt = attemptCount + 1;
@@ -116,11 +120,17 @@ export default function SinglePanel({ currentLength, setAttempts, onGameOver, pl
     if (fb.correctPositions === currentLength) {
       const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
       setStatus({ type: "success", text: `You cracked it in ${newAttempt} attempts and ${elapsed}s.` });
+      if (toastManager) {
+        toastManager.showToast(`🎉 Solved in ${newAttempt} attempts!`, 'success');
+      }
       onGameOver(elapsed, newAttempt);
       // save to leaderboard
       saveToLeaderboard(newAttempt, elapsed);
     } else {
       setStatus({ type: "info", text: `${fb.correctDigitsTotal} correct, ${fb.correctPositions} in place.` });
+      if (toastManager && fb.correctPositions > 0) {
+        toastManager.showToast(`${fb.correctPositions} digit${fb.correctPositions > 1 ? 's' : ''} in correct position!`, 'info');
+      }
     }
     // clear inputs and focus first
     const nextInputs = inputs.slice();
@@ -193,15 +203,23 @@ export default function SinglePanel({ currentLength, setAttempts, onGameOver, pl
       const digit = availableDigits[Math.floor(Math.random() * availableDigits.length)];
       setHintedDigitsWithoutPos([...hintedDigitsWithoutPos, digit]);
       setHintCount(1);
-      setStatus({ type: "info", text: `Hint: one of the digits is ${digit}.` });
+      audioManager.play('click');
+      setStatus({ type: "info", text: `💡 Hint: one of the digits is ${digit}.` });
+      if (toastManager) {
+        toastManager.showToast(`One digit is ${digit}`, 'info');
+      }
       return;
     }
     if (attemptCount >= 10 && hintCount >= 1) {
       const preferDigitOnly = hintCount === 1;
       const revealed = revealDigitWithPosition(preferDigitOnly);
       if (revealed) {
+        audioManager.play('click');
         setHintCount((c) => c + 1);
-        setStatus({ type: "info", text: "Hint used." });
+        setStatus({ type: "info", text: "💡 Position hint revealed." });
+        if (toastManager) {
+          toastManager.showToast('Position hint revealed', 'info');
+        }
       } else {
         setStatus({ type: "info", text: "All positions already revealed by hints." });
       }
@@ -211,6 +229,7 @@ export default function SinglePanel({ currentLength, setAttempts, onGameOver, pl
   function handleClear() {
     setInputs(Array(5).fill(""));
     setStatus({ type: "info", text: "Cleared." });
+    audioManager.play('click');
     inputRefs.current[0]?.focus();
   }
 
