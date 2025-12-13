@@ -7,7 +7,7 @@ import React from "react";
 
 export default function HelperPanel() {
   return (
-    <section className="helper-panel">
+    <section className="panel helper-panel">
       <div className="panel-title">How It Works</div>
       <ul>
         <li>

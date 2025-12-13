@@ -21,6 +21,7 @@ export default function SinglePanel({ currentLength, setAttempts, onGameOver, pl
   const [hintCount, setHintCount] = useState(0);
   const [hintedPositions, setHintedPositions] = useState(new Set());
   const [hintedDigitsWithoutPos, setHintedDigitsWithoutPos] = useState([]);
+  const [gameFinished, setGameFinished] = useState(false);
 
   const inputRefs = useRef([]);
   const startTimeRef = useRef(null);
@@ -48,6 +49,7 @@ export default function SinglePanel({ currentLength, setAttempts, onGameOver, pl
     setHintCount(0);
     setHintedPositions(new Set());
     setHintedDigitsWithoutPos([]);
+    setGameFinished(false);
     setInputs(Array(5).fill(""));
     setAttempts(0);
     startTimeRef.current = Date.now();
@@ -82,18 +84,35 @@ export default function SinglePanel({ currentLength, setAttempts, onGameOver, pl
   }
 
   function handleInputChange(index, value) {
+    // Prevent changes to hinted positions
+    if (hintedPositions.has(index)) return;
+    
     const v = value.replace(/[^0-9]/g, "").slice(0, 1);
     const next = inputs.slice();
     next[index] = v;
     setInputs(next);
     if (v && index < currentLength - 1) {
-      inputRefs.current[index + 1]?.focus();
+      // Skip hinted positions when navigating forward
+      let nextIndex = index + 1;
+      while (nextIndex < currentLength && hintedPositions.has(nextIndex)) {
+        nextIndex++;
+      }
+      if (nextIndex < currentLength) {
+        inputRefs.current[nextIndex]?.focus();
+      }
     }
   }
 
   function handleKeyDown(index, e) {
     if (e.key === "Backspace" && !inputs[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
+      // Skip hinted positions when navigating backward
+      let prevIndex = index - 1;
+      while (prevIndex >= 0 && hintedPositions.has(prevIndex)) {
+        prevIndex--;
+      }
+      if (prevIndex >= 0) {
+        inputRefs.current[prevIndex]?.focus();
+      }
     }
     if (e.key === "Enter") {
       const active = inputs.slice(0, currentLength);
@@ -119,6 +138,7 @@ export default function SinglePanel({ currentLength, setAttempts, onGameOver, pl
     if (fb.correctPositions === currentLength) {
       const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000);
       setStatus({ type: "success", text: `You cracked it in ${newAttempt} attempts and ${elapsed}s.` });
+      setGameFinished(true);
       if (toastManager) {
         toastManager.showToast(`🎉 Solved in ${newAttempt} attempts!`, 'success');
       }
@@ -131,11 +151,22 @@ export default function SinglePanel({ currentLength, setAttempts, onGameOver, pl
         toastManager.showToast(`${fb.correctPositions} digit${fb.correctPositions > 1 ? 's' : ''} in correct position!`, 'info');
       }
     }
-    // clear inputs and focus first
+    // clear inputs and focus first (but preserve hinted positions)
     const nextInputs = inputs.slice();
-    for (let i = 0; i < currentLength; i++) nextInputs[i] = "";
+    for (let i = 0; i < currentLength; i++) {
+      if (!hintedPositions.has(i)) {
+        nextInputs[i] = "";
+      }
+    }
     setInputs(nextInputs);
-    inputRefs.current[0]?.focus();
+    // Focus on the first non-hinted input
+    let focusIndex = 0;
+    while (focusIndex < currentLength && hintedPositions.has(focusIndex)) {
+      focusIndex++;
+    }
+    if (focusIndex < currentLength) {
+      inputRefs.current[focusIndex]?.focus();
+    }
   }
 
   function saveToLeaderboard(attemptsCount, elapsed) {
@@ -226,10 +257,24 @@ export default function SinglePanel({ currentLength, setAttempts, onGameOver, pl
   }
 
   function handleClear() {
-    setInputs(Array(5).fill(""));
+    const nextInputs = inputs.slice();
+    // Clear all inputs except hinted positions
+    for (let i = 0; i < nextInputs.length; i++) {
+      if (!hintedPositions.has(i)) {
+        nextInputs[i] = "";
+      }
+    }
+    setInputs(nextInputs);
     setStatus({ type: "info", text: "Cleared." });
     audioManager.play('click');
-    inputRefs.current[0]?.focus();
+    // Focus the first non-hinted input
+    let firstNonHintedIndex = 0;
+    while (firstNonHintedIndex < currentLength && hintedPositions.has(firstNonHintedIndex)) {
+      firstNonHintedIndex++;
+    }
+    if (firstNonHintedIndex < currentLength) {
+      inputRefs.current[firstNonHintedIndex]?.focus();
+    }
   }
 
   return (
@@ -238,25 +283,31 @@ export default function SinglePanel({ currentLength, setAttempts, onGameOver, pl
         <div className="panel-title"><span>Current Guess</span></div>
 
         <div className="guess-row">
-          {Array.from({ length: 5 }).map((_, idx) => (
-            <input
-              key={idx}
-              type="tel"
-              maxLength="1"
-              className="digit-input"
-              style={{ display: idx < currentLength ? "" : "none" }}
-              value={inputs[idx]}
-              onChange={(e) => handleInputChange(idx, e.target.value)}
-              onKeyDown={(e) => handleKeyDown(idx, e)}
-              ref={(el) => (inputRefs.current[idx] = el)}
-            />
-          ))}
+          {Array.from({ length: 5 }).map((_, idx) => {
+            const isHinted = hintedPositions.has(idx);
+            const isDigitHinted = hintedDigitsWithoutPos.includes(parseInt(inputs[idx]));
+            const isDisabled = isHinted || gameFinished;
+            return (
+              <input
+                key={idx}
+                type="tel"
+                maxLength="1"
+                className={`digit-input ${isHinted || isDigitHinted ? 'hinted' : ''}`}
+                style={{ display: idx < currentLength ? "" : "none" }}
+                value={inputs[idx]}
+                disabled={isDisabled}
+                onChange={(e) => handleInputChange(idx, e.target.value)}
+                onKeyDown={(e) => handleKeyDown(idx, e)}
+                ref={(el) => (inputRefs.current[idx] = el)}
+              />
+            );
+          })}
         </div>
 
         <div className="button-row">
-          <button className="btn btn-primary" id="btnGuess" onClick={handleSubmitGuess}>Submit</button>
-          <button className="btn btn-secondary" id="btnClear" onClick={handleClear}>Clear</button>
-          <button className="btn btn-hint" id="btnHint" disabled={!updateHintAvailability()} onClick={useHint}>Hint</button>
+          <button className="btn btn-primary" id="btnGuess" disabled={gameFinished} onClick={handleSubmitGuess}>Submit</button>
+          <button className="btn btn-secondary" id="btnClear" disabled={gameFinished} onClick={handleClear}>Clear</button>
+          <button className="btn btn-hint" id="btnHint" disabled={gameFinished || !updateHintAvailability()} onClick={useHint}>Hint</button>
         </div>
 
         <div className={`message-bar ${status.type === "info" ? "message-info" : status.type === "warning" ? "message-warning" : "message-success"}`} id="statusBar" style={{ display: "flex" }}>
@@ -265,7 +316,7 @@ export default function SinglePanel({ currentLength, setAttempts, onGameOver, pl
         </div>
       </section>
 
-      <HistoryPanel history={history} onNewGame={() => initSingleGame()} />
+      <HistoryPanel history={history} />
     </>
   );
 }

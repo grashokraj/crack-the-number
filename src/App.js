@@ -1,21 +1,22 @@
 import React, { useState, useCallback } from "react";
-import GamePage from "./components/GamePage";
 import "./App.css";
 import Home from "./components/Home";
-import NewGameModal  from "./components/NewGameModal";
+import NewGameModal from "./components/NewGameModal";
+import SinglePlayerPage from "./components/SinglePlayerPage";
+import DuelPage from "./components/DuelPage";
 import { ToastContainer, createToastManager } from "./components/ToastNotification";
 /*
-  App manages top-level UI state: showing modal, current player/mode/difficulty.
+  App manages top-level UI state and page navigation.
+  Supports multiple pages: home, single-player, duel
   Also manages toast notifications system.
-  No CSS here — keep classNames from original HTML for easier styling.
 */
 
 export default function App() {
+  const [currentPage, setCurrentPage] = useState("home"); // home | single | duel
   const [showModal, setShowModal] = useState(false);
   const [playerName, setPlayerName] = useState("Anonymous");
   const [gameMode, setGameMode] = useState("single"); // single | vsComputer | vsPlayer | online
   const [difficultyKey, setDifficultyKey] = useState("medium"); // easy | medium | hard
-  const [startGameTrigger, setStartGameTrigger] = useState(0);
   const [toasts, setToasts] = useState([]);
 
   // Toast manager for use throughout the app
@@ -31,37 +32,67 @@ export default function App() {
     setShowModal(true);
   }
 
+  function backToHome() {
+    setCurrentPage("home");
+  }
+
   function startGameFromModal({ name, mode, difficulty }) {
     setPlayerName(name || "Anonymous");
     setGameMode(mode || "single");
     setDifficultyKey(difficulty || "medium");
     setShowModal(false);
-    // bump trigger so GamePage re-inits when new game started from modal
-    setStartGameTrigger((s) => s + 1);
+
+    // Navigate to appropriate page based on game mode
+    if (mode === "single" || mode === "vsPlayer") {
+      setCurrentPage("single");
+    } else if (mode === "vsComputer") {
+      setCurrentPage("duel");
+    } else {
+      // For online or other modes, could add more pages later
+      setCurrentPage("single"); // fallback
+    }
+  }
+
+  function renderCurrentPage() {
+    switch (currentPage) {
+      case "single":
+        return (
+          <SinglePlayerPage
+            playerName={playerName}
+            difficultyKey={difficultyKey}
+            onBackToHome={backToHome}
+          />
+        );
+      case "duel":
+        return (
+          <DuelPage
+            playerName={playerName}
+            difficultyKey={difficultyKey}
+            onBackToHome={backToHome}
+          />
+        );
+      default:
+        return (
+          <Home
+            playerName={playerName}
+            gameMode={gameMode}
+            difficultyKey={difficultyKey}
+            onNewGameClick={openNewGameModal}
+          />
+        );
+    }
   }
 
   return (
     <div className="app-root">
       <ToastContainer toasts={toasts} onDismiss={dismissToast} />
       <div className="game-shell">
-        <Home
-          playerName={playerName}
-          gameMode={gameMode}
-          difficultyKey={difficultyKey}
-          onNewGameClick={openNewGameModal}
-        />
+        {renderCurrentPage()}
         <NewGameModal
           visible={showModal}
           initial={{ playerName, gameMode, difficultyKey }}
           onClose={() => setShowModal(false)}
           onStart={startGameFromModal}
-        />
-        <GamePage
-          key={startGameTrigger} // re-mount GamePage each new game start
-          playerName={playerName}
-          gameMode={gameMode}
-          difficultyKey={difficultyKey}
-          toastManager={toastManager}
         />
       </div>
     </div>

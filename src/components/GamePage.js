@@ -151,6 +151,7 @@ export default function GamePage({ playerName, gameMode, difficultyKey, toastMan
 
       <header className="game-header">
         <div className="game-title">Crack The Number</div>
+        <button className="btn-main new-game-btn" onClick={() => window.location.reload()}>New Game</button>
         <div className="player-info" id="playerInfo">
           {playerName} | Mode: {gameMode === "single" ? "Single Player" : gameMode === "vsComputer" ? "vs Computer" : "Online"}
         </div>
@@ -184,6 +185,7 @@ export default function GamePage({ playerName, gameMode, difficultyKey, toastMan
             setAttempts={setAttempts}
             toastManager={toastManager}
           />
+          <HistoryPanel />
         </>
       ) : (
         <div className="panel">

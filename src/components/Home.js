@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 
 /*
-  Simple home component that shows title, subtitle and quickest finish label,
+  Simple home component that shows title, subtitle, quickest finish, game rules,
   and a New Game button which notifies parent via onNewGameClick.
 */
 
@@ -25,10 +25,12 @@ export default function Home({ playerName, gameMode, difficultyKey, onNewGameCli
 
   return (
     <div id="homePage" className="home-page">
-      <div className="home-title">Crack The Number</div>
-      <div className="home-subtitle">Guess the secret number (1–9, no repeats)</div>
-      <div className="quickest-finish" id="quickestFinishLabel">Quickest Finish: {quickest}</div>
-      <button className="btn-main" id="btnNewGameHome" onClick={onNewGameClick}>New Game</button>
+      <div className="home-content">
+        <div className="home-title">Crack The Number</div>
+        <div className="home-subtitle">Guess the secret number (1–9, no repeats)</div>
+        <div className="quickest-finish" id="quickestFinishLabel">Quickest Finish: {quickest}</div>
+        <button className="btn-main" id="btnNewGameHome" onClick={onNewGameClick}>New Game</button>
+      </div>
     </div>
   );
 }
